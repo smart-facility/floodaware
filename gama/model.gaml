@@ -5,18 +5,18 @@ import "./components/visualisation.gaml"
 global {	
 	file experiments <- folder('./experiments');
 	file parameters <- json_file(experiments.path+'/julyaug2020.json');
-	file db_param <- json_file(experiments.path+'/'+parameters['data']['db']);
+	file db_param <- json_file(experiments.path+'/'+map(parameters['data'])['db']);
 	
-	date start <- date(parameters['run']['start']);
+	date start <- date(map(parameters['run'])['start']);
 	date starting_date <- start - 20#mn;
-	date end <- date(parameters['run']['end']);
+	date end <- date(map(parameters['run'])['end']);
 	date stopping_date <- end + 20#mn;
-	float step <- float(parameters['run']['step']);
+	float step <- float(map(parameters['run'])['step']);
 	
-	float lag_param <- float(parameters['flow']['lag_param']);
-	float stream_const <- float(parameters['flow']['stream_const']);
+	float lag_param <- float(map(parameters['flow'])['lag_param']);
+	float stream_const <- float(map(parameters['flow'])['stream_const']);
 	
-    geometry shape <- parameters['data']['geom'] = 'db' ? envelope(db_param.contents): envelope(file(parameters['data']['geom']));
+    geometry shape <- map(parameters['data'])['geom'] = 'db' ? envelope(db_param.contents): envelope(file(map(parameters['data'])['geom']));
 	
 	init {
 		create cloud;
@@ -31,12 +31,12 @@ global {
 species cloud skills: [SQLSKILL] {
 	
 	init {
-		if parameters["data"]["rain"] = "bom" {
+		if map(parameters["data"])["rain"] = "bom" {
 			list c <- select(params:db_param.contents, select:'SELECT st_asbinary(st_transform(geom, 28356)) AS geom, round(val::decimal, 2) AS val, stamp::text 
 FROM rainfall_raster, st_dumpaspolygons(st_clip(rast, (SELECT st_expand(st_envelope(st_collect(geom)), 0.01) FROM catchment))) WHERE val > 0 AND stamp BETWEEN \''+start+'\' AND \''+end+'\'');
 			create subcloud from: c with: [shape::'geom', time::'stamp', payload::'val'];
-		} else if parameters["data"]["rain"] = "mhl" {
-			list gauges <- parameters["data"]["gauges"];
+		} else if map(parameters["data"])["rain"] = "mhl" {
+			list gauges <- map(parameters["data"])["gauges"];
 			int len <- length(gauges);
 			int count <- 1;
 			string str <- '(';
@@ -172,58 +172,58 @@ species catchment skills: [SQLSKILL] {
 
 experiment run {
 	output {
-		display main type: opengl {
+		display main type: java2D {
 			species catchment;
 			species cloud position: {0, 0, 0.5} transparency: 0.65;
 		}
 	}	
 }
 
-experiment upload skills: [SQLSKILL] {
-	int experiment_index;
-	map<int, string> upload_strings;
-	init {
-		//date(machine_time/1000)-(date(0)-date('19700101'))+11#h
-		//string experiment_date <- string(current_date);
-		do insert(params: db_param.contents, into: 'experiment_info', 
-			columns: ['name', 'runtime', 'data', 'lag_param', 'stream_const', 'step', 'starttime', 'endtime'], 
-			values: [parameters['name'], "current_timestamp", 'bom', lag_param, stream_const, step, "'"+string(start)+"'::timestamp", "'"+string(end)+"'::timestamp"]
-		);
-		list get_index <- select(params: db_param.contents, select: 'SELECT index, name, runtime FROM experiment_info ORDER BY runtime DESC LIMIT 3');
-		experiment_index <- int(get_index[2][0][0]);
-		write 'experiment: ' + experiment_index;
-		ask catchment[0].sub_catch {
-			int catch_index <- catchment[0].sub_catch index_of self;
-			myself.upload_strings[catch_index] <- '';
-		}
-	}
+// experiment upload skills: [SQLSKILL] {
+// 	int experiment_index;
+// 	map<int, string> upload_strings;
+// 	init {
+// 		//date(machine_time/1000)-(date(0)-date('19700101'))+11#h
+// 		//string experiment_date <- string(current_date);
+// 		do insert(params: db_param.contents, into: 'experiment_info', 
+// 			columns: ['name', 'runtime', 'data', 'lag_param', 'stream_const', 'step', 'starttime', 'endtime'], 
+// 			values: [parameters['name'], "current_timestamp", 'bom', lag_param, stream_const, step, "'"+string(start)+"'::timestamp", "'"+string(end)+"'::timestamp"]
+// 		);
+// 		list get_index <- select(params: db_param.contents, select: 'SELECT index, name, runtime FROM experiment_info ORDER BY runtime DESC LIMIT 3');
+// 		experiment_index <- int(get_index[2][0][0]);
+// 		write 'experiment: ' + experiment_index;
+// 		ask catchment[0].sub_catch {
+// 			int catch_index <- catchment[0].sub_catch index_of self;
+// 			myself.upload_strings[catch_index] <- '';
+// 		}
+// 	}
 	
-	reflex write {
-		string timestep <- "'"+string(current_date)+"'::timestamp";
-		ask catchment[0].sub_catch {
-			int catch_index <- catchment[0].sub_catch index_of self;
-			ask myself {
-				upload_strings[catch_index] <- upload_strings[catch_index] + 'INSERT INTO experiment_data 
-			(index, timestep, catchment, rain_in, rain_buffer, storage, flow) VALUES 
-			('+experiment_index+','+timestep+','+catch_index+','+myself.rain_in/myself.shape.area+','+myself.rain_buffer+','+myself.storage+','+myself.out_flow/step+');';
-//				do insert(params: db_param.contents, into: 'experiment_data',
-//					columns: ['index', 'timestep', 'catchment', 'rain_in', 'rain_buffer', 'storage', 'flow'],
-//					values: [experiment_index, timestep, catch_index, -1, myself.rain_buffer, myself.storage, myself.out_flow/step]
-//				);
-			}
-			rain_in <- 0.0;
-		}
-	}
+// // 	reflex write {
+// // 		string timestep <- "'"+string(current_date)+"'::timestamp";
+// // 		ask catchment[0].sub_catch {
+// // 			int catch_index <- catchment[0].sub_catch index_of self;
+// // 			ask myself {
+// // 				upload_strings[catch_index] <- upload_strings[catch_index] + 'INSERT INTO experiment_data 
+// // 			(index, timestep, catchment, rain_in, rain_buffer, storage, flow) VALUES 
+// // 			('+experiment_index+','+timestep+','+catch_index+','+myself.rain_in/myself.shape.area+','+myself.rain_buffer+','+myself.storage+','+myself.out_flow/step+');';
+// // //				do insert(params: db_param.contents, into: 'experiment_data',
+// // //					columns: ['index', 'timestep', 'catchment', 'rain_in', 'rain_buffer', 'storage', 'flow'],
+// // //					values: [experiment_index, timestep, catch_index, -1, myself.rain_buffer, myself.storage, myself.out_flow/step]
+// // //				);
+// // 			}
+// // 			rain_in <- 0.0;
+// // 		}
+// // 	}
 	
-	reflex uploader when: current_date > stopping_date {
-		ask catchment[0].sub_catch {
-			int catch_index <- catchment[0].sub_catch index_of self;
-			ask myself {
-				write 'uploading: ' + catch_index;
-				do executeUpdate(params: db_param.contents, updateComm: upload_strings[catch_index]);
-				upload_strings[catch_index] <- '';
-				write 'uploaded';
-			}
-		}
-	}
-}
+// // 	reflex uploader when: current_date > stopping_date {
+// // 		ask catchment[0].sub_catch {
+// // 			int catch_index <- catchment[0].sub_catch index_of self;
+// // 			ask myself {
+// // 				write 'uploading: ' + catch_index;
+// // 				do executeUpdate(params: db_param.contents, updateComm: upload_strings[catch_index]);
+// // 				upload_strings[catch_index] <- '';
+// // 				write 'uploaded';
+// // 			}
+// // 		}
+// // 	}
+// }
