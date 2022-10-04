@@ -1,5 +1,5 @@
 {
-    "host":"db",
+    "host":"floodaware-db.postgres.database.azure.com",
     "dbtype":"postgres",
     "database":"floodaware",
     "port":"5432",
