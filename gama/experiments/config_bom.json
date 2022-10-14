@@ -6,12 +6,12 @@
     },
     "run":{
         "step":300,
-        "start":"20221005",
-        "end":"20221007"
+        "start":"20221013",
+        "end":"20221014 12:04"
     },
     "data":{
         "db":"db.json",
-        "rain":"mhl",
+        "rain":"bom",
         "gauges": [568229, 568318],
         "geom":"db",
         "output":"db"

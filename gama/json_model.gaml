@@ -4,7 +4,7 @@ import "./components/visualisation.gaml"
 
 global {	
 	file experiments <- folder('./experiments');
-	file parameters <- json_file(experiments.path+'/july22_mhl.json');
+	file parameters <- json_file(experiments.path+'/config_mhl.json');
 	file db_param <- json_file(experiments.path+'/'+map(parameters['data'])['db']);
 	
 	date start <- date(map(parameters['run'])['start']);
@@ -199,8 +199,9 @@ experiment upload skills: [SQLSKILL] {
 			columns: ['name', 'runtime', 'data', 'lag_param', 'stream_const', 'step', 'starttime', 'endtime'], 
 			values: [parameters['name'], "current_timestamp", map(parameters["data"])["rain"], lag_param, stream_const, step, "'"+string(start)+"'::timestamp", "'"+string(end)+"'::timestamp"]
 		);
-		list get_index <- select(params: db_param.contents, select: 'SELECT index, name, runtime FROM experiment_info ORDER BY runtime DESC LIMIT 3');
-		experiment_index <- int(list(list(get_index[2])[0])[0]);
+		//list get_index <- select(params: db_param.contents, select: 'SELECT index, name, runtime FROM experiment_info WHERE index < 9000000 ORDER BY runtime DESC LIMIT 3');
+		experiment_index <- 9000000;
+		write 'starting experiment - start time: ' + start + ' end time: ' + end;
 		write 'experiment: ' + experiment_index;
 		ask catchment[0].sub_catch {
 			int catch_index <- catchment[0].sub_catch index_of self;
@@ -222,6 +223,7 @@ experiment upload skills: [SQLSKILL] {
 //	}
 	
 	reflex uploader when: current_date > stopping_date {
+		do executeUpdate(params: db_param.contents, updateComm: "DELETE FROM experiment_data WHERE index = 9000000");
 		write 'uploading...';
 		ask catchment[0].sub_catch {
 			int catch_index <- catchment[0].sub_catch index_of self;

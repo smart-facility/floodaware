@@ -189,8 +189,8 @@ experiment run {
 // 			columns: ['name', 'runtime', 'data', 'lag_param', 'stream_const', 'step', 'starttime', 'endtime'], 
 // 			values: [parameters['name'], "current_timestamp", 'bom', lag_param, stream_const, step, "'"+string(start)+"'::timestamp", "'"+string(end)+"'::timestamp"]
 // 		);
-// 		list get_index <- select(params: db_param.contents, select: 'SELECT index, name, runtime FROM experiment_info ORDER BY runtime DESC LIMIT 3');
-// 		experiment_index <- int(get_index[2][0][0]);
+// 		//list get_index <- select(params: db_param.contents, select: 'SELECT index, name, runtime FROM experiment_info ORDER BY runtime DESC LIMIT 3');
+// 		experiment_index <- 9000000;
 // 		write 'experiment: ' + experiment_index;
 // 		ask catchment[0].sub_catch {
 // 			int catch_index <- catchment[0].sub_catch index_of self;
